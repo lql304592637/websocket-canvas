@@ -1,0 +1,474 @@
+<ui:composition
+        xmlns:ui="http://java.sun.com/jsf/facelets"
+        xmlns:h="http://java.sun.com/jsf/html"
+        xmlns:p="http://primefaces.org/ui"
+        xmlns:r="http://java.sun.com/jsf/composite/r"
+        template="/layouts/template.new.xhtml">
+    <ui:define name="title">
+        <title><h:outputText value="#{messages['page.personRealtimeAnalyze']}"/></title>
+    </ui:define>
+
+    <ui:define name="reset">
+        <h:outputFormat value="#{personRealtimeAnalyzeBacking.reset()}"/>
+    </ui:define>
+
+    <ui:define name="breadcrumb">
+        <ol class="breadcrumb">
+            <li>
+                <a href="${pageContext.request.contextPath}/views/home.xhtml">#{messages['page.home']}</a>
+            </li>
+            <li>
+                #{messages['menu.mi']}
+            </li>
+            <li>
+                #{messages['menu.mi.realTime']}
+            </li>
+            <li>
+                <a href="${pageContext.request.contextPath}/views/mi/realtime/overallRealtimeAnalyze.xhtml">#{messages['page.overallRealtimeAnalyze']}</a>
+            </li>
+            <li class="active">
+                <strong>#{messages['page.personRealtimeAnalyze']}</strong>
+            </li>
+        </ol>
+    </ui:define>
+
+    <ui:define name="toolbar">
+        <ul class="nav navbar-nav">
+            <li>
+                <p:commandButton
+                        styleClass="btn btn-default fa fa-external-link"
+                        value="#{messages['page.overallRealtimeAnalyze']}"
+                        action="#{overallRealtimeAnalyzeBacking.gotoPage()}"/>
+            </li>
+            <li>
+                <p:commandButton
+                        styleClass="btn btn-success fa fa-refresh"
+                        value="#{messages['page.personRealtimeAnalyze']}"
+                        onclick="connect()"
+                        action="#{personRealtimeAnalyzeBacking.connect()}"/>
+            </li>
+            <li>
+                <div class="btn-group">
+                    <p:commandButton
+                            styleClass="btn btn-default fa fa-laptop"
+                            value="#{messages['simulate']}"
+                            onclick="simulateClick()"
+                            action="#{personRealtimeAnalyzeBacking.testWebSocket()}"/>
+                    <p:commandButton
+                            styleClass="btn btn-default fa fa-map-marker"
+                            value="#{messages['trail']}"
+                            onclick="trailClick()"
+                            action="#{personRealtimeAnalyzeBacking.trailClick()}"/>
+                    <p:selectBooleanButton
+                            styleClass="btn #{personRealtimeAnalyzeBacking.heatmapEnabled ? 'btn-success' : 'btn-default'} fa fa-area-chart"
+                            value="#{personRealtimeAnalyzeBacking.heatmapEnabled}"
+                            onLabel="#{messages['chart.heatmap.enabled']}"
+                            offLabel="#{messages['chart.heatmap.disabled']}"
+                            style="">
+                        <p:ajax event="change" process="@this" update="@parent, ecHeatmapChartDiv"/>
+                    </p:selectBooleanButton>
+                </div>
+            </li>
+        </ul>
+    </ui:define>
+
+    <ui:define name="body">
+        <div class="row sl-row-sm">
+            <div class="col-md-12">
+                <div class="ibox">
+                    <div class="ibox-title">
+                        <h3>员工实时定位</h3>
+                    </div>
+                    <div class="ibox-content" style="height: #{layoutManager.bodyHeight * 2 / 3 - 32}px;">
+                        <div align="center" style="margin-top: 10px;position:absolute;z-index:80;width:100%;">
+                            <canvas id="personOrbit"
+                                    style="background-image: url(/images/plant-layout.png); background-size:100% 100%"
+                                    width="#{(layoutManager.bodyHeight * 2 / 3 - 82) * 2.8}"
+                                    height="#{layoutManager.bodyHeight * 2 / 3 - 82}"/>
+                        </div>
+                        <div align="center" style="margin-top: 10px;margin-left: 20px;position:absolute;z-index:100;width:100%;">
+                            <p:outputPanel id="ecHeatmapChartDiv">
+                                <r:ecHeatmapChart
+                                        id="ecHeatmapChart"
+                                        data="#{personRealtimeAnalyzeBacking.heatmapChartModel}"
+                                        width="#{(layoutManager.bodyHeight * 2 / 3 - 82) * 2.8}"
+                                        height="#{layoutManager.bodyHeight * 2 / 3 - 82}"
+                                        rendered="#{personRealtimeAnalyzeBacking.heatmapEnabled}"
+                                        url="/api/rmes/v1/personRealtimeAnalyze/getInfo"
+                                        interval="0.1"/>
+                            </p:outputPanel>
+                        </div>
+                    </div>
+                </div>
+                <div class="ibox">
+                    <div class="ibox-title">
+                        <h3>当班员工</h3>
+                    </div>
+                    <div class="ibox-content" style="height: #{layoutManager.bodyHeight / 3 - 84}px;">
+                        <table class="table" style="font-size: 1.6vh; margin-top: 10px;">
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th>#{personRealtimeAnalyzeBacking.realtimePersonList[0].name}</th>
+                                <th>#{personRealtimeAnalyzeBacking.realtimePersonList[1].name}</th>
+                                <th>#{personRealtimeAnalyzeBacking.realtimePersonList[2].name}</th>
+                                <th>#{personRealtimeAnalyzeBacking.realtimePersonList[3].name}</th>
+                                <th>#{personRealtimeAnalyzeBacking.realtimePersonList[4].name}</th>
+                                <th>#{personRealtimeAnalyzeBacking.realtimePersonList[5].name}</th>
+                                <th>#{personRealtimeAnalyzeBacking.realtimePersonList[6].name}</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td><label>编号</label></td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[0].bzid}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[1].bzid}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[2].bzid}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[3].bzid}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[4].bzid}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[5].bzid}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[6].bzid}</td>
+                            </tr>
+                            <tr>
+                                <td><label>岗位</label></td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[0].title}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[1].title}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[2].title}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[3].title}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[4].title}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[5].title}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimePersonList[6].title}</td>
+                            </tr>
+                            <tr>
+                                <td><label>主管</label></td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimeManager.name}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimeManager.name}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimeManager.name}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimeManager.name}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimeManager.name}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimeManager.name}</td>
+                                <td>#{personRealtimeAnalyzeBacking.realtimeManager.name}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p:socket onMessage="handleMessageLocationSim" channel="/locationSim"/>
+        <p:socket onMessage="handleMessageLocationTime" channel="/locationTime"/>
+
+        <script type="text/javascript">
+            var posNumber = 0;
+
+            var trailsArray = new Array();
+            trailsArray[1] = new Array();
+            trailsArray[2] = new Array();
+            trailsArray[3] = new Array();
+            trailsArray[4] = new Array();
+            trailsArray[9959] = new Array();
+            trailsArray[10527] = new Array();
+            trailsArray[10547] = new Array();
+            trailsArray[10557] = new Array();
+            trailsArray[10559] = new Array();
+            trailsArray[10808] = new Array();
+            trailsArray[11225] = new Array();
+            trailsArray[11227] = new Array();
+            trailsArray[11248] = new Array();
+
+
+            var idArray = new Array("1", "2", "3", "4");
+            var simMap = new Array();
+            var realArray = new Array(9959, 10527, 10547, 10557, 10559, 10808, 11225, 11227, 11248);
+
+            var alarmArray = new Array();
+            alarmArray[9959] = new Object();
+            alarmArray[10527] = new Object();
+            alarmArray[10547] = new Object();
+            alarmArray[10557] = new Object();
+            alarmArray[10559] = new Object();
+            alarmArray[10808] = new Object();
+            alarmArray[11225] = new Object();
+            alarmArray[11227] = new Object();
+            alarmArray[11248] = new Object();
+
+            var simulate = false;
+            var trail = false;
+            var connected = false;
+
+            var ws1;
+            var pointMap = new Array();
+            var myCanvas = document.getElementById("personOrbit");
+            var context = myCanvas.getContext("2d");
+            var rt = (myCanvas.width / 946 + myCanvas.height / 338) / 2;
+            context.translate(0, myCanvas.height);
+
+            var image = new Image();
+            image.src = "/in/img/dingweigreen.png";
+            var image1 = new Image();
+            image1.src = "/in/img/dingweired.png";
+
+            function handleMessageLocationTime(msg) {
+                if(connected) {
+                    var info = msg;
+                    var p = info.split(",");
+                    var type = parseFloat(p[0]);
+                    switch (type) {
+                        case 1:
+                            handlePosData(p);
+                            break;
+                        case 2:
+                            handleAlarmInfo(p);
+                            break;
+                        case 3:
+                            handleTrailData(info);
+                    }
+                }
+            }
+
+            function connect() {
+                connected = true;
+                if (simulate) {
+                    if (trail) {
+                        for (var i = 0; i &lt; trailsArray.length; ++i) {
+                            trailsArray[i] = [];
+                        }
+                        trail = false;
+                    }
+                    simulate = false;
+                    context.clearRect(0, 0, myCanvas.width, -myCanvas.height);
+                }
+                if (trail) {
+                    for (var i = 0; i &lt; trailsArray.length; ++i) {
+                        trailsArray[i] = [];
+                    }
+                    trail = false;
+                }
+                context.clearRect(0, 0, myCanvas.width, -myCanvas.height);
+            }
+
+            function handlePosData(p) {
+                    var pos = new Object();
+                    pos.id = p[1];
+                    pos.x = p[2];
+                    pos.y = p[3];
+
+                    pointMap[pos.id] = pos;
+
+                    context.clearRect(0, 0, myCanvas.width, -myCanvas.height);
+                    context.font = "normal normal lighter 10px Trebuchet,Arial,sans-serif";
+
+                    context.fillStyle = "#EE5656";
+                    var alarmLength = realArray.length;
+                    var q = 0;
+                    while(alarmLength--) {
+                        var aInfo = alarmArray[alarmLength];
+                        if(aInfo != null) {
+                            if(aInfo.in == 0) {
+                                context.drawImage(image1, 835 * rt, -(315 - 20*q++) * rt);
+                                context.fillText(aInfo.personName, 860 * rt, -(299 - 20*q++) * rt);
+                                context.fillText("86%", 900 * rt, -(299 - 20*q++) * rt);
+                            }
+                        }
+                    }
+
+                    context.fillStyle = "#13B897";
+                    var realLength = realArray.length;
+                    while (realLength--) {
+                        var id = realArray[realLength];
+                        var tempPoint = pointMap[id];
+                        if (tempPoint != null) {
+                            context.drawImage(image, parseFloat(tempPoint.x) * 0.47 * rt, -(parseFloat(tempPoint.y) + 32) * 0.52 * rt);
+                            context.fillText("员工" + tempPoint.id, parseFloat(tempPoint.x) * 0.47 * rt, -(parseFloat(tempPoint.y) + 32) * 0.52 * rt);
+                            context.strokeStyle = '#13B897';
+                            if (trail) {
+                                var trailArray1 = trailsArray[id];
+                                if (trailArray1.length &gt; 1) {
+                                    for (var i = 0; i &lt; trailArray1.length - 1; ++i) {
+                                        var ps1 = trailArray1[i];
+                                        var ps2 = trailArray1[i + 1];
+                                        var pos1 = ps1.split(",");
+                                        var pos2 = ps2.split(",");
+                                        context.lineWidth = 1;
+                                        context.beginPath();
+                                        context.moveTo((parseFloat(pos1[0])) * 0.47 * rt, -(parseFloat(pos1[1])) * 0.52 * rt);
+                                        context.lineTo((parseFloat(pos2[0])) * 0.47 * rt, -(parseFloat(pos2[1])) * 0.52 * rt);
+                                        context.closePath();
+                                        context.stroke();
+                                    }
+                                }
+                            }
+                        }
+                    }
+            }
+
+            function handleAlarmInfo(p)
+            {
+                var tagId = parseFloat(p[1]);
+                var personName = p[2];
+                var positionId = p[3];
+                var pType = p[4];
+
+                alarmArray[tagId].personName = personName;
+
+                if(pType == "exit") {
+                    alarmArray[tagId].in = 0;
+                }
+                else if(pType == "enter") {
+                    alarmArray[tagId].in = 1;
+                }
+            }
+
+            function handleTrailData(info) {
+                var posInfo = info.split(".");
+                var id = (posInfo[0].split(","))[1];
+                trailsArray[id] = posInfo.slice(1);
+            }
+
+            function handleMessageLocationSim(msg) {
+                if (simulate) {
+                    var pos = msg;
+                    var posInfo = pos.split(",");
+                    var curPos = new Object();
+                    var idStr = posInfo[0];
+                    curPos.id = parseFloat(idStr);
+                    curPos.x = posInfo[1];
+                    curPos.y = posInfo[2];
+                    simMap[curPos.id] = curPos;
+                    if (trail) {
+                        var trailArray = trailsArray[curPos.id];
+                        trailArray.push(curPos);
+                    }
+
+                    context.clearRect(0, 0, myCanvas.width, -myCanvas.height);
+                    context.font = "normal normal lighter 10px Trebuchet,Arial,sans-serif";
+                    context.fillStyle = "#EE5656";
+//                    context.drawImage(image1, 835 * rt, -335 * rt);
+//                    context.fillText("薛文桥", 860 * rt, -319 * rt);
+//                    context.fillText("92%", 900 * rt, -319 * rt);
+                    context.drawImage(image1, 835 * rt, -315 * rt);
+                    context.fillText("李伟", 860 * rt, -299 * rt);
+                    context.fillText("86%", 900 * rt, -299 * rt);
+//                    context.drawImage(image1, 835 * rt, -295 * rt);
+//                    context.fillText("潘松", 860 * rt, -279 * rt);
+//                    context.fillText("89%", 900 * rt, -279 * rt);
+                    var length = idArray.length;
+                    while (length--) {
+                        var idStr1 = idArray[length];
+                        var id = parseFloat(idStr1);
+                        var tempPos = simMap[id];
+                        if (tempPos != null) {
+                            var x = parseFloat(tempPos.x);
+                            var y = parseFloat(tempPos.y);
+                            if(idStr1 == "1") {
+                                context.drawImage(image, (x - 190) * 0.5 * rt, -(y - 75) * 0.5 * rt);
+                            }
+                            else if(idStr1 == "2") {
+                                context.drawImage(image, (x - 190) * 0.5 * rt, -(y - 60) * 0.5 * rt);
+                            }
+                            else if(idStr1 == "3") {
+                                context.drawImage(image, (x - 890) * 0.5 * rt, -(y - 52) * 0.5 * rt);
+                            }
+                            else if(idStr1 == "4") {
+                                context.drawImage(image, (x - 270) * 0.5 * rt, -(y - 100) * 0.5 * rt);
+                            }
+                            context.font = "normal normal lighter 10px Trebuchet,Arial,sans-serif";
+                            var name;
+                            switch (idStr1) {
+                                case "1":
+                                    name = "王国川";
+                                    break;
+                                case "2":
+                                    name = "周同远";
+                                    break;
+                                case "3":
+                                    name = "刘斌";
+                                    break;
+                                case "4":
+                                    name = "刘舒";
+                                    break;
+                            }
+                            if (name.length == 2) {
+                                name = name[0] + " " + name[1];
+                            }
+                            context.fillStyle = "#13B897";
+                            if(idStr1 == "1") {
+                                context.fillText(name + " 98%", (x - 208) * 0.5 * rt, -(y - 72) * 0.5 * rt);
+                            }
+                            else if(idStr1 == "2") {
+                                context.fillText(name + " 87%", (x - 208) * 0.5 * rt, -(y - 57) * 0.5 * rt);
+                            }
+                            else if(idStr1 == "3"){
+                                context.fillText(name + " 91%", (x - 908) * 0.5 * rt, -(y - 49) * 0.5 * rt);
+                            }
+                            else if(idStr1 == "4") {
+                                context.fillText(name + " 95%", (x - 288) * 0.5 * rt, -(y - 97) * 0.5 * rt);
+                            }
+                            context.strokeStyle = '#13B897';
+                            if (trail) {
+                                var trailArray1 = trailsArray[id];
+                                if (trailArray1.length &gt; 1) {
+                                    for (var i = 0; i &lt; trailArray1.length - 1; ++i) {
+                                        var pos1 = trailArray1[i];
+                                        var pos2 = trailArray1[i + 1];
+                                        context.lineWidth = 1;
+                                        context.beginPath();
+                                        if(id == 1) {
+                                            context.moveTo((parseFloat(pos1.x) - 180) * 0.5 * rt, -(parseFloat(pos1.y) - 89) * 0.5 * rt);
+                                            context.lineTo((parseFloat(pos2.x) - 180) * 0.5 * rt, -(parseFloat(pos2.y) - 89) * 0.5 * rt);
+                                        }
+                                        else if(id == 2) {
+                                            context.moveTo((parseFloat(pos1.x) - 180) * 0.5 * rt, -(parseFloat(pos1.y) - 74) * 0.5 * rt);
+                                            context.lineTo((parseFloat(pos2.x) - 180) * 0.5 * rt, -(parseFloat(pos2.y) - 74) * 0.5 * rt);
+                                        }
+                                        else if(id == 3) {
+                                            context.moveTo((parseFloat(pos1.x) - 880) * 0.5 * rt, -(parseFloat(pos1.y) - 66) * 0.5 * rt);
+                                            context.lineTo((parseFloat(pos2.x) - 880) * 0.5 * rt, -(parseFloat(pos2.y) - 66) * 0.5 * rt);
+                                        }
+                                        else if(id == 4) {
+                                            context.moveTo((parseFloat(pos1.x) - 260) * 0.5 * rt, -(parseFloat(pos1.y) - 114) * 0.5 * rt);
+                                            context.lineTo((parseFloat(pos2.x) - 260) * 0.5 * rt, -(parseFloat(pos2.y) - 114) * 0.5 * rt);
+                                        }
+                                        context.closePath();
+                                        context.stroke();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            function simulateClick() {
+                connected = false;
+                if (!simulate) {
+                    simulate = true;
+                    context.clearRect(0, 0, myCanvas.width, -myCanvas.height);
+                }
+                else if (simulate) {
+                    if (trail) {
+                        for (var i = 0; i &lt; trailsArray.length; ++i) {
+                            trailsArray[i] = [];
+                        }
+                        trail = false;
+                    }
+                    simulate = false;
+                    context.clearRect(0, 0, myCanvas.width, -myCanvas.height);
+                }
+            }
+
+            function trailClick() {
+                if (!trail) {
+                    trail = true;
+                }
+                else if (trail) {
+                    for (var i = 0; i &lt; trailsArray.length; ++i) {
+                        trailsArray[i] = [];
+                    }
+                    trail = false;
+                }
+            }
+        </script>
+    </ui:define>
+</ui:composition>
